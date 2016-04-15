@@ -1,0 +1,23 @@
+{
+  "name": "harbor-client",
+  "version": "0.0.1",
+  "description": "JavaScript client library for Harbor.",
+  "main": "index.js",
+  "scripts": {
+    "tests": "mocha --timeout 10000"
+  },
+  "keywords": [],
+  "author": "john.ritsema@turner.com",
+  "license": "apache 2.0",
+  "dependencies": {
+    "browser-request": "^0.3.3",
+    "request": "~2.27.0"
+  },
+  "devDependencies": {
+    "chai": "^3.5.0",
+    "mocha": "^2.4.5"
+  },
+  "browser": {
+    "request": "browser-request"
+  }
+}
