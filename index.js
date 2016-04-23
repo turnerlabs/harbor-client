@@ -23,10 +23,14 @@ module.exports = (function() {
 
     //update the shipment with the new image
     request.put({ url: url, json: payload }, function (err, res, body) {
-      if (err)
+      if (err) {
         callback(err);
-      else if (res.statusCode != 200)
+        return;
+      }
+      else if (res.statusCode != 200) {
         callback(new Error('non-200 status code: ' + body));
+        return;
+      }
 
       //now trigger the shipment
       var triggerUrl = util.format('%s/%s/%s/ec2',
@@ -36,11 +40,14 @@ module.exports = (function() {
       );
 
       request.post(triggerUrl, function(err, res, body) {
-        if (err)
+        if (err) {
           callback(err);
-        else if (res.statusCode != 200)
+          return;
+        }
+        else if (res.statusCode != 200) {
           callback(new Error('non-200 status code: ' + body));
-
+          return;
+        }
         callback(null, { success: true });
       });
     });
