@@ -6,6 +6,7 @@ module.exports = (function() {
 
   var shipItUri = 'http://shipit.services.dmtio.net';
   var triggerUri = 'http://harbor-trigger.services.dmtio.net';
+  var authApi = 'http://auth.services.dmtio.net';
 
   var deploy = function(options, callback) {
 
@@ -24,11 +25,11 @@ module.exports = (function() {
     //update the shipment with the new image
     request.put({ url: url, json: payload }, function (err, res, body) {
       if (err) {
-        callback(err);
+        callback(err, { success: false });
         return;
       }
       else if (res.statusCode != 200) {
-        callback(new Error('non-200 status code: ' + body));
+        callback(new Error(util.format('update shipment, status code: %s, %s', res.statusCode, body)), { success: false });
         return;
       }
 
@@ -41,11 +42,49 @@ module.exports = (function() {
 
       request.post(triggerUrl, function(err, res, body) {
         if (err) {
-          callback(err);
+          callback(err, { success: false });
           return;
         }
         else if (res.statusCode != 200) {
-          callback(new Error('non-200 status code: ' + body));
+          callback(new Error(util.format('trigger, status code: %s, %s', res.statusCode, body)), { success: false });
+          return;
+        }
+        callback(null, { success: true });
+      });
+    });
+  };
+
+  var deleteShipment = function(options, callback) {
+    //get token
+    var payload = {
+      username: options.username,
+      password: options.password
+    };
+    request.post({ url: authApi + '/v1/auth/gettoken', json: payload }, function(err, res, body) {
+      if (err) {
+        callback(err, { success: false });
+        return;
+      }
+      else if (res.statusCode != 200) {
+        callback(new Error(util.format('gettoken, status code: %s, %s', res.statusCode, body)), { success: false });
+        return;
+      }
+
+      //now actually delete shipment
+      var reqOptions = {
+        url: shipItUri + '/v1/shipment/' + options.shipment,
+        headers: {
+          'x-username': payload.username,
+          'x-token': body.token
+        }
+      };
+      request.del(reqOptions, function(err, res, body) {
+        if (err) {
+          callback(err, { success: false });
+          return;
+        }
+        else if (res.statusCode != 200) {
+          callback(new Error(util.format('delete, status code: %s, %s', res.statusCode, body)), { success: false });
           return;
         }
         callback(null, { success: true });
@@ -55,6 +94,7 @@ module.exports = (function() {
 
   return {
     deploy: deploy,
+    deleteShipment: deleteShipment
   };
 
 })();
