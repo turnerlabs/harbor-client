@@ -41,12 +41,12 @@ harbor.deleteShipment(options, function(err, result) {
 
 install into project
 ```
-$ npm install --save-dev git@github.com:turnerlabs/harbor-client.git
+$ npm install --save-dev https://github.com/turnerlabs/harbor-client.git
 ```
 
 or install globally
 ```
-$ npm install -g git@github.com:turnerlabs/harbor-client.git
+$ npm install -g https://github.com/turnerlabs/harbor-client.git
 ```
 
 then
