@@ -92,9 +92,96 @@ module.exports = (function() {
     });
   };
 
+  var updateEnvVars = function(options, callback) {
+
+    //get token
+    var payload = {
+      username: options.username,
+      password: options.password
+    };
+
+    request.post({ url: authApi + '/v1/auth/gettoken', json: payload }, function(err, res, body) {
+      if (err) {
+        callback(err, { success: false });
+        return;
+      }
+      else if (res.statusCode != 200) {
+        callback(new Error(util.format('gettoken, status code: %s, %s', res.statusCode, body)), { success: false });
+        return;
+      }
+
+      //read the environment variables from the .json file
+      var envVars = require(options.envVarsFile);
+
+      //track the async calls
+      var items = [];
+
+      //delete the envvars, then add them back
+      Object.getOwnPropertyNames(envVars).forEach(function(envVar) {
+        console.log('updating ' + envVar);
+        items.push(envVar);
+
+        var url = util.format('%s/v1/shipment/%s/environment/%s/envVar',
+          shipItUri,
+          options.shipment,
+          options.environment
+        );
+
+        var headers = {
+          'x-username': payload.username,
+          'x-token': body.token
+        };
+
+        var reqOptions = {
+          url: url + '/' + envVar,
+          headers: headers
+        };
+
+        request.del(reqOptions, function(err, res, body) {
+          if (err) {
+            callback(err, { success: false });
+            return;
+          }
+          else if (!(res.statusCode === 200 || res.statusCode === 422)) {
+            callback(new Error(util.format('delete, status code: %s, %s', res.statusCode, body)), { success: false });
+            return;
+          }
+
+          //now re-create envvar
+          var reqOptions = {
+            url: url + 's',
+            headers: headers,
+            json: true,
+            body: { name: envVar, value: envVars[envVar] }
+          };
+
+          request.post(reqOptions, function(err, res, body) {
+            if (err) {
+              callback(err, { success: false });
+              return;
+            }
+            else if (res.statusCode != 200) {
+              callback(new Error(util.format('post, status code: %s, %s', res.statusCode, body)), { success: false });
+              return;
+            }
+            items.pop();
+
+            //fire callback when we're done
+            if (items.length === 0)
+              callback(null, { success: true });
+          });
+        });
+      }); //foreach
+    });
+  };
+
+  var completeAsync = function (items, callback) {
+  }
+
   return {
     deploy: deploy,
-    deleteShipment: deleteShipment
+    deleteShipment: deleteShipment,
+    updateEnvVars: updateEnvVars
   };
 
 })();
