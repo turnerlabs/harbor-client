@@ -85,7 +85,6 @@ function update() {
     usage();
     return;
   }
-  console.log(process.cwd());
 
   //prompt user for password
   prompt('password: ', updateInternal);
