@@ -26,20 +26,25 @@ $ harbor deploy --shipment myapp --environment dev --container myapp --image reg
 $ harbor delete --shipment myapp --user foo --passwd bar
 ```
 
-**update environment variables on a shipment**
+**update a shipment**
 
-Note that this does a delete/add against the api.
+Currently only supports updating environment variables.  Note that this does a delete/add against the api.
 
 ```bash
-$ harbor updateEnvVars --shipment myapp --environment dev --envVarsFile environments/dev.json --user foo --passwd bar
+$ harbor update --file dev.json --user foo
 ```
-The expected format of the environment variables file is
+The expected file format is
 ```json
 {
-  "SOME_VARIABLE": "foo",
-  "ANOTHER_VARIABLE": "bar"
+  "shipment": "my-app",
+  "environment": "dev",
+  "envVars": {
+    "SOME_VARIABLE": "foo",
+    "ANOTHER_VARIABLE": "bar"
+  }
 }
 ```
+
 
 ### usage (library)
 

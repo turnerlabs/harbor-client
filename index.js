@@ -92,7 +92,7 @@ module.exports = (function() {
     });
   };
 
-  var updateEnvVars = function(options, callback) {
+  var update = function(options, callback) {
 
     //get token
     var payload = {
@@ -111,21 +111,22 @@ module.exports = (function() {
       }
 
       //read the environment variables from the .json file
-      var envVars = require(options.envVarsFile);
+      var harborConig = require(util.format('%s/%s', process.cwd(), options.file));
 
       //track the async calls
       var items = [];
 
       //delete the envvars, then add them back
-      Object.getOwnPropertyNames(envVars).forEach(function(envVar) {
+      Object.getOwnPropertyNames(harborConig.envVars).forEach(function(envVar) {
         console.log('updating ' + envVar);
         items.push(envVar);
 
         var url = util.format('%s/v1/shipment/%s/environment/%s/envVar',
           shipItUri,
-          options.shipment,
-          options.environment
+          harborConig.shipment,
+          harborConig.environment
         );
+        console.log(url);
 
         var headers = {
           'x-username': payload.username,
@@ -152,7 +153,7 @@ module.exports = (function() {
             url: url + 's',
             headers: headers,
             json: true,
-            body: { name: envVar, value: envVars[envVar] }
+            body: { name: envVar, value: harborConig.envVars[envVar] }
           };
 
           request.post(reqOptions, function(err, res, body) {
@@ -175,13 +176,10 @@ module.exports = (function() {
     });
   };
 
-  var completeAsync = function (items, callback) {
-  }
-
   return {
     deploy: deploy,
     deleteShipment: deleteShipment,
-    updateEnvVars: updateEnvVars
+    update: update
   };
 
 })();
