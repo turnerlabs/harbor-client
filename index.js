@@ -126,7 +126,6 @@ module.exports = (function() {
           harborConig.shipment,
           harborConig.environment
         );
-        console.log(url);
 
         var headers = {
           'x-username': payload.username,
