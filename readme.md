@@ -23,7 +23,7 @@ $ harbor deploy --shipment myapp --environment dev --container myapp --image reg
 
 **delete shipment**
 ```bash
-$ harbor delete --shipment myapp --user foo --passwd bar
+$ harbor delete --shipment myapp --user foo
 ```
 
 **update a shipment**

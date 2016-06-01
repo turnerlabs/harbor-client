@@ -1,8 +1,7 @@
 #!/usr/bin/env node
 
-'use strict';
-
 var fs = require('fs');
+var readline = require('readline');
 var minimist = require('minimist')(process.argv.slice(2));
 var harbor = require('./index.js');
 
@@ -17,8 +16,36 @@ else
 
 function usage() {
   console.log('deploy example: harbor deploy --shipment myapp --environment dev --container myapp --image registry.services.dmtio.net/myapp:1.0.0 --buildtoken zcdcNMgHuusHm6pDtOGJ01CJxwJCUKz9');
-  console.log('delete example: harbor delete --shipment myapp --user foo --passwd bar');
+  console.log('delete example: harbor delete --shipment myapp --user foo');
   console.log('update example: harbor update --file environments/dev.json --user foo');
+}
+
+function promptHidden(query, callback) {
+
+  var rl = readline.createInterface({
+    input: process.stdin,
+    output: process.stdout
+  });
+
+  var stdin = process.openStdin();
+  process.stdin.on('data', function(char) {
+    char = char + '';
+    switch (char) {
+      case '\n':
+      case '\r':
+      case '\u0004':
+        stdin.pause();
+        break;
+      default:
+        process.stdout.write('\033[2K\033[200D' + query + Array(rl.line.length + 1).join('*'));
+        break;
+    }
+  });
+
+  rl.question(query, function(value) {
+    rl.history = rl.history.slice(1);
+    callback(value);
+  });
 }
 
 function deployShipment() {
@@ -49,18 +76,22 @@ function deployShipment() {
 }
 
 function deleteShipment() {
-  if (!minimist.shipment
-    || !minimist.user
-    || !minimist.passwd) {
+  if (!minimist.shipment || !minimist.user) {
     usage();
     return;
   }
+
+  //prompt user for password
+  promptHidden('password: ', deleteInternal);
+}
+
+function deleteInternal(passwd) {
   console.log('deleting shipment...');
 
   var options = {
     shipment: minimist.shipment,
     username: minimist.user,
-    password: minimist.passwd
+    password: passwd
   };
 
   harbor.deleteShipment(options, function(err, result) {
@@ -71,15 +102,6 @@ function deleteShipment() {
   });
 }
 
-function prompt(question, callback) {
-  process.stdin.resume();
-  process.stdout.write(question);
-  process.stdin.once('data', function (data) {
-    process.stdin.pause();
-    callback(data.toString().trim());
-  });
-}
-
 function update() {
   if (!minimist.file || !minimist.user) {
     usage();
@@ -87,7 +109,7 @@ function update() {
   }
 
   //prompt user for password
-  prompt('password: ', updateInternal);
+  promptHidden('password: ', updateInternal);
 }
 
 function updateInternal(passwd) {
