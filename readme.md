@@ -6,12 +6,12 @@ JavaScript client for Harbor.  Both CLI and library.  It's isomorphic which mean
 
 install into project
 ```
-$ npm install --save-dev https://github.com/turnerlabs/harbor-client.git
+$ npm install --save-dev https://github.com/turnerlabs/harbor-client.git#docker-compose
 ```
 
 or install globally
 ```
-$ npm install -g https://github.com/turnerlabs/harbor-client.git
+$ npm install -g https://github.com/turnerlabs/harbor-client.git#docker-compose
 ```
 
 then
