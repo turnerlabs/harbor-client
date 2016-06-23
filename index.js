@@ -31,58 +31,25 @@ module.exports = (function() {
       else if (res.statusCode != 200) {
         callback(new Error(util.format('update shipment, status code: %s, %s', res.statusCode, body)), { success: false });
         return;
-      }
-      
-      //todo: update replicas (if specified)
+      }      
 
-      //PUT /v1/shipment/:Shipment/environment/:Environment/provider/:name
-      url = util.format('%s/v1/shipment/%s/environment/%s/provider/ec2',
-        shipItUri,
+      //now trigger the shipment
+      var triggerUrl = util.format('%s/%s/%s/ec2',
+        triggerUri,
         options.shipment,
         options.environment
       );
 
-      var headers = {
-        'x-username': options.username,
-        'x-token': options.userToken
-      };
-
-      var reqOptions = {
-        url: url,
-        headers: headers,
-        body: { replicas: options.replicas },
-        json: true                
-      };      
-
-      //update the replicas on the ec2 provider
-      request.put(reqOptions, function (err, res, body) {
+      request.post(triggerUrl, function(err, res, body) {
         if (err) {
           callback(err, { success: false });
           return;
         }
         else if (res.statusCode != 200) {
-          callback(new Error(util.format('update shipment, status code: %s, %s', res.statusCode, body)), { success: false });
+          callback(new Error(util.format('trigger, status code: %s, %s', res.statusCode, body)), { success: false });
           return;
-        }    
-
-        //now trigger the shipment
-        var triggerUrl = util.format('%s/%s/%s/ec2',
-          triggerUri,
-          options.shipment,
-          options.environment
-        );
-
-        request.post(triggerUrl, function(err, res, body) {
-          if (err) {
-            callback(err, { success: false });
-            return;
-          }
-          else if (res.statusCode != 200) {
-            callback(new Error(util.format('trigger, status code: %s, %s', res.statusCode, body)), { success: false });
-            return;
-          }
-          callback(null, { success: true });
-        });
+        }
+        callback(null, { success: true });
       });
     });
   };
@@ -128,7 +95,7 @@ module.exports = (function() {
 
   var update = function(options, callback) {
 
-    //get token
+    //authenticate and get token
     var payload = {
       username: options.username,
       password: options.password
@@ -146,65 +113,96 @@ module.exports = (function() {
       //store token
       var token = body.token;
 
-      //track the async calls
-      var items = [];
+      //PUT /v1/shipment/:Shipment/environment/:Environment/provider/:name
+      var url = util.format('%s/v1/shipment/%s/environment/%s/provider/ec2',
+        shipItUri,
+        options.shipment,
+        options.environment
+      );
 
-      //delete the envvars, then add them back
-      Object.getOwnPropertyNames(options.harborConfig.envVars).forEach(function(envVar) {
-        //console.log('updating ' + envVar);
-        items.push(envVar);
+      var headers = {
+        'x-username': options.username,
+        'x-token': token
+      };
 
-        var url = util.format('%s/v1/shipment/%s/environment/%s/envVar',
-          shipItUri,
-          options.harborConfig.shipment,
-          options.harborConfig.environment
-        );
+      var reqOptions = {
+        url: url,
+        headers: headers,
+        body: { replicas: options.replicas },
+        json: true                
+      };      
 
-        var headers = {
-          'x-username': payload.username,
-          'x-token': token
-        };
+      //update the replicas on the ec2 provider
+      request.put(reqOptions, function (err, res, body) {
+        if (err) {
+          callback(err, { success: false });
+          return;
+        }
+        else if (res.statusCode != 200) {
+          callback(new Error(util.format('update shipment, status code: %s, %s', res.statusCode, body)), { success: false });
+          return;
+        }
 
-        var reqOptions = {
-          url: url + '/' + envVar,
-          headers: headers
-        };
+        //track the async calls
+        var items = [];
 
-        request.del(reqOptions, function(err, res, body) {
-          if (err) {
-            callback(err, { success: false });
-            return;
-          }
-          else if (!(res.statusCode === 200 || res.statusCode === 422)) {
-            callback(new Error(util.format('delete, status code: %s, %s', res.statusCode, body)), { success: false });
-            return;
-          }
+        //delete the envvars, then add them back
+        Object.getOwnPropertyNames(options.envVars).forEach(function(envVar) {
+          //console.log('updating ' + envVar);
+          items.push(envVar);
 
-          //now re-create envvar
-          var reqOptions = {
-            url: url + 's',
-            headers: headers,
-            json: true,
-            body: { name: envVar, value: options.harborConfig.envVars[envVar] }
+          var url = util.format('%s/v1/shipment/%s/environment/%s/envVar',
+            shipItUri,
+            options.shipment,
+            options.environment
+          );
+
+          var headers = {
+            'x-username': payload.username,
+            'x-token': token
           };
 
-          request.post(reqOptions, function(err, res, body) {
+          var reqOptions = {
+            url: url + '/' + envVar,
+            headers: headers
+          };
+
+          request.del(reqOptions, function(err, res, body) {
             if (err) {
               callback(err, { success: false });
               return;
             }
-            else if (res.statusCode != 200) {
-              callback(new Error(util.format('post, status code: %s, %s', res.statusCode, body)), { success: false });
+            else if (!(res.statusCode === 200 || res.statusCode === 422)) {
+              callback(new Error(util.format('delete, status code: %s, %s', res.statusCode, body)), { success: false });
               return;
             }
-            items.pop();
 
-            //fire callback when we're done
-            if (items.length === 0)
-              callback(null, { success: true, token: token });
+            //now re-create envvar
+            var reqOptions = {
+              url: url + 's',
+              headers: headers,
+              json: true,
+              body: { name: envVar, value: options.envVars[envVar] }
+            };
+
+            request.post(reqOptions, function(err, res, body) {
+              if (err) {
+                callback(err, { success: false });
+                return;
+              }
+              else if (res.statusCode != 200) {
+                callback(new Error(util.format('post, status code: %s, %s', res.statusCode, body)), { success: false });
+                return;
+              }
+              items.pop();
+
+              //fire callback when we're done
+              if (items.length === 0)
+                callback(null, { success: true });
+            });
           });
-        });
-      }); //foreach
+        }); //foreach        
+	    });
     });
   };
 

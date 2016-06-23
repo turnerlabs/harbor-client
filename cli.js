@@ -14,6 +14,8 @@ else if (minimist._.indexOf('update') > -1)
   update();
 else if (minimist._.indexOf('up') > -1)
   up();
+else if (minimist._.indexOf('down') > -1)
+  down();  
 else
   usage();
 
@@ -21,6 +23,8 @@ function usage() {
   console.log('deploy example: harbor deploy --shipment myapp --environment dev --container myapp --image registry.services.dmtio.net/myapp:1.0.0 --buildtoken zcdcNMgHuusHm6pDtOGJ01CJxwJCUKz9');
   console.log('delete example: harbor delete --shipment myapp --user foo');
   console.log('update example: harbor update --file environments/dev.json --user foo');
+  console.log('up example: harbor up --user foo');
+  console.log('down example: harbor down --user foo');
 }
 
 function promptHidden(query, callback) {
@@ -117,7 +121,7 @@ function update() {
 
 function updateInternal(passwd) {
 
-  //read the .json file
+  //read the harbor config from the specified .json file
   var harborConfig = require(util.format('%s/%s', process.cwd(), minimist.file));
 
   console.log('updating shipment...');
@@ -125,7 +129,9 @@ function updateInternal(passwd) {
   var options = {
     username: minimist.user,
     password: passwd,
-    harborConfig: harborConfig
+    shipment: harborConfig.shipment,
+    environment: harborConfig.environment,
+    envVars: harborConfig.envVars
   };
 
   harbor.update(options, function(err, result) {
@@ -141,6 +147,18 @@ function up() {
     usage();
     return;
   }
+  updateAndTrigger('Starting');
+}
+
+function down() {
+  if (!minimist.user) {
+    usage();
+    return;
+  }
+  updateAndTrigger('Stopping');
+}
+
+function updateAndTrigger(action) {
 
   //prompt user for password
   promptHidden('password: ', function(passwd) {
@@ -161,45 +179,42 @@ function up() {
         Object.getOwnPropertyNames(dockerCompose.services)
           .forEach(function(service) { services.push(service); });
         
+        //get compose service config
+        //todo: iterate
         var dockerConfig = dockerCompose.services[services[0]];
 
         //get harbor config
         var shipment = Object.getOwnPropertyNames(harborCompose)[0];
-        var harborConifg = harborCompose[shipment];
+        var harborConifg = harborCompose[shipment];        
 
         // - update environment variables (in docker-compose.yml)
-        // - set replicas
-        var updateOptions = {
+        var options = {
           username: minimist.user,
           password: passwd,
-          harborConfig: {
-            shipment: shipment,
-            envVars: dockerConfig.environment,
-            environment: harborConifg.env,            
-            replicas: harborConifg.replicas,
-            buildToken: harborConifg.buildToken
-          }
+          shipment: shipment,
+          environment: harborConifg.env,
+          envVars: dockerConfig.environment,
+          replicas: harborConifg.replicas,                    
+          buildToken: harborConifg.buildToken
         };
 
-        console.log('updating shipment');
+        //if stopping, set replicas = 0
+        if (action === 'Stopping')            
+          options.replicas = 0;
 
-        harbor.update(updateOptions, function(err, result) {
+        console.log('Updating shipment');
+
+        harbor.update(options, function(err, result) {
           if (!err && result.success) {
-            console.log('shipment updated');
             
+            // - set replicas
             // - trigger
             // todo: iterate containers/services in compose file
-            console.log('Starting ', services[0]);
-            var options = {
-              shipment: updateOptions.harborConfig.shipment,
-              environment: updateOptions.harborConfig.environment,
-              container: services[0],
-              image: dockerConfig.image,
-              buildToken: updateOptions.harborConfig.buildToken,
-              replicas: updateOptions.harborConfig.replicas,
-              username: minimist.user,
-              userToken: result.token
-            };
+            console.log(action, services[0]);
+
+            //add additional options
+            options.container = services[0];
+            options.image = dockerConfig.image;
 
             harbor.deploy(options, function(err, result) {
               if (!err && result.success) {
