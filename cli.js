@@ -5,6 +5,7 @@ var readline = require('readline');
 var minimist = require('minimist')(process.argv.slice(2));
 var harbor = require('./index.js');
 var yaml = require('js-yaml');
+var util = require('util');
 
 if (minimist._.indexOf('deploy') > -1)
   deployShipment();
