@@ -47,28 +47,34 @@ The expected file format is
 
 **Experimental docker-compose like features**
 
-Run an existing docker-compose app on Harbor with a similar workflow.
+Define and run multi-container Docker applications on Harbor.
 
-Assuming you have a docker-compose.yml in your current directory, you can bring up a service with 
+Assuming you have a docker-compose.yml in your current directory, you can bring up a shipment with... 
 
 ```
-$ harbor up
+$ harbor up --user foo
 ```
 
-- updates environment variables (in docker-compose.yml)
-- sets replicas 
+- updates environment variables 
+- updates replicas
 - triggers
-- waits for elb to come up
 
 
-To stop a service, remove containers, and delete the ELB
+To stop a shipment, remove containers, and delete the ELB
 
 ```
-$ harbor down
+$ harbor down --user foo
 ```
 
 - updates replicas=0
 - triggers
+
+
+Missing features here are: 
+
+- dynamically creating a shipment if it doesn't already exist
+- multi-container support
+- access logs
 
 
 This diagram shows how we can take an existing docker-compose.yml file that describes a containerized app, and run it on a variety of backends.
