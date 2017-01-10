@@ -1,1 +1,4 @@
 node_modules
+harbor.json
+docker-compose.yml
+harbor-compose.yml

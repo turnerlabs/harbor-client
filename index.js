@@ -110,21 +110,24 @@ module.exports = (function() {
         return;
       }
 
-      //read the environment variables from the .json file
-      var harborConig = require(util.format('%s/%s', process.cwd(), options.file));
-
       //track the async calls
-      var items = [];
+      var items = [];      
+
+      //read the environment variables from the .json file
+      var harborConfig = require(util.format('%s/%s', process.cwd(), options.file));
+
+      //add dummy env var to work around kubernetes deployment issue
+      harborConfig.envVars.FORCE_RESTART = (new Date()).toString();
 
       //delete the envvars, then add them back
-      Object.getOwnPropertyNames(harborConig.envVars).forEach(function(envVar) {
+      Object.getOwnPropertyNames(harborConfig.envVars).forEach(function(envVar) {
         console.log('updating ' + envVar);
         items.push(envVar);
 
         var url = util.format('%s/v1/shipment/%s/environment/%s/envVar',
           shipItUri,
-          harborConig.shipment,
-          harborConig.environment
+          harborConfig.shipment,
+          harborConfig.environment
         );
 
         var headers = {
@@ -152,7 +155,7 @@ module.exports = (function() {
             url: url + 's',
             headers: headers,
             json: true,
-            body: { name: envVar, value: harborConig.envVars[envVar] }
+            body: { name: envVar, value: harborConfig.envVars[envVar] }
           };
 
           request.post(reqOptions, function(err, res, body) {

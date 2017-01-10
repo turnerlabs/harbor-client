@@ -1,6 +1,6 @@
 {
   "name": "harbor-client",
-  "version": "0.4.1",
+  "version": "0.5.0",
   "description": "JavaScript client library for Harbor.",
   "main": "index.js",
   "bin": {
